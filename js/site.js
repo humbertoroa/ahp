@@ -10,6 +10,10 @@ displayHelper.initializePoll = function(){
 		displayHelper.addOptionToList();
 	});
 	
+	$('#addMultiOptions').click(function(){
+		displayHelper.addMultiOptionsToList();
+	});
+
 	$('.startPoll').click(function(){
 		displayHelper.startPoll();
 	});
@@ -45,11 +49,33 @@ displayHelper.addOptionToList = function(){
 };
 
 /**
+ * purpose: add multiple options to the option list using the strings in
+ * the textarea: #multiOptionText
+ */
+displayHelper.addMultiOptionsToList = function(){
+	// split the options from the textarea
+	var options = $('#multiOptionText').val();
+	var optionArray = options.split('\n');
+
+	// add each option
+	$.each(optionArray, function(){
+		displayHelper._addOption(this);
+	});
+
+	// clear the textarea
+	$('#multiOptionText').val('');
+
+};
+
+/**
  * purpose: add an option to the option list
  * 
  * @param String option the option text
  */
 displayHelper._addOption = function(option){
+
+	option.trim();
+
 	if(option.length > 0){
 		$('<tr class="new"><td class="index"></td><td class="option">' + option + '</td><td><a href="#" class="removeParent">[x]</a></td></tr>')
 		.appendTo('#optionsList').hide().fadeIn('slow');	
@@ -167,8 +193,9 @@ displayHelper.startPoll = function(){
 			pollSettings.optionArray[pollSettings.optionArray.length] = $(this).text();
 		});
 		
-		pollSettings.voteType = $("input[@name='votingType']:checked").val();
-		
+		//pollSettings.voteType = $("input[name='votingType']:checked").val();
+        pollSettings.voteType = "simpleVoting";
+
 		// start the poll
 		ahp.startPoll(pollSettings);
 		

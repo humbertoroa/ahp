@@ -18,38 +18,27 @@
 			<h3>Set Up the Poll</h3>
 			<!-- question text -->
 			<fieldset>
-				<legend>Poll Question</legend>
-				<input class="questionTextInput" style="width: 20em;"/>
+				<legend>Question</legend>
+				<input class="questionTextInput" style="width: 40em;"/>
 			</fieldset>
 	
 			<!-- option list -->
 			<fieldset>
-				<legend>Poll Options</legend>
+				<legend>Options</legend>
 				<table id="optionsList" ></table>
 				<!-- add an option -->
+				<!--
 				<div class="newOption">
 					<label>New Option:</label><input id="optionText" style="width: 20em;"/>
 					<a href="#" id="addOption">Add</a>
 				</div>
-			</fieldset>
-			
-			
-			<!-- option list -->
-			<fieldset>
-				<legend>Simple or Detailed Voting?</legend>
-				<ul class="votingOptions">
-				<li>
-				<input type="radio" name="votingType" value="simpleVoting"><strong>Simple</strong></input> 
-				-- Displays three vote options: Same, Slightly More, and Much More. 
-				Good for quick analysis or for an audience that is unfamiliar with AHP.<br />			
-				<img src="img/simple.png" />
-				</li>
-				<li>
-				<input type="radio"  name="votingType" value="detailedVoting"><strong>Detailed</strong></input>
-				  -- Displays 10 vote options: 1,2,3,4,5,6,7,8,9, and 10. Good for detailed analysis.<br />		
-				<img src="img/1-10.png" />
-				</li>
-				</ul>
+				-->
+				<!-- add multiple options -->
+				<div class="newOption">
+					<label>Enter the options below. Each option should be on a separate line.</label><br />
+					<textarea rows="10" id="multiOptionText" style="width: 40em;"></textarea><br />
+					<input type="button" id="addMultiOptions" value="Add +" />
+				</div>
 			</fieldset>
 			
 		</div>
@@ -57,8 +46,8 @@
 		<!-- start,stop, retry buttons -->
 		<div class="">
 			<input type="button" class="startPoll" value="Start" />
-			<input type="button" class="stopPoll"" style="display:none;" value="Stop" />
-			<input type="button" class="changePoll"" style="display:none;" value="Retry with New Options" />
+			<input type="button" class="stopPoll" style="display:none;" value="Stop" />
+			<input type="button" class="changePoll" style="display:none;" value="Retry with New Options" />
 		</div>
 		
 		<!-- poll questions -->
