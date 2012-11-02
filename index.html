@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+	<title>AHP</title>
+	
+	<link rel="stylesheet" type="text/css" href="css/styles.css" />
+	
+	<script type="text/javascript" src="js/jquery-1.2.6.js"></script>
+	<script type="text/javascript" src="js/ahpCalc.obj.js"></script>
+	<script type="text/javascript" src="js/site.js"></script>
+</head>
+<body>
+	<div class="container">
+	
+		<!-- poll setup-->
+		<div class="setup">
+			<h3>Set Up the Poll</h3>
+			<!-- question text -->
+			<fieldset>
+				<legend>Poll Question</legend>
+				<input class="questionTextInput" style="width: 20em;"/>
+			</fieldset>
+	
+			<!-- option list -->
+			<fieldset>
+				<legend>Poll Options</legend>
+				<table id="optionsList" ></table>
+				<!-- add an option -->
+				<div class="newOption">
+					<label>New Option:</label><input id="optionText" style="width: 20em;"/>
+					<a href="#" id="addOption">Add</a>
+				</div>
+			</fieldset>
+			
+			
+			<!-- option list -->
+			<fieldset>
+				<legend>Simple or Detailed Voting?</legend>
+				<ul class="votingOptions">
+				<li>
+				<input type="radio" name="votingType" value="simpleVoting"><strong>Simple</strong></input> 
+				-- Displays three vote options: Same, Slightly More, and Much More. 
+				Good for quick analysis or for an audience that is unfamiliar with AHP.<br />			
+				<img src="img/simple.png" />
+				</li>
+				<li>
+				<input type="radio"  name="votingType" value="detailedVoting"><strong>Detailed</strong></input>
+				  -- Displays 10 vote options: 1,2,3,4,5,6,7,8,9, and 10. Good for detailed analysis.<br />		
+				<img src="img/1-10.png" />
+				</li>
+				</ul>
+			</fieldset>
+			
+		</div>
+		
+		<!-- start,stop, retry buttons -->
+		<div class="">
+			<input type="button" class="startPoll" value="Start" />
+			<input type="button" class="stopPoll"" style="display:none;" value="Stop" />
+			<input type="button" class="changePoll"" style="display:none;" value="Retry with New Options" />
+		</div>
+		
+		<!-- poll questions -->
+		<div id="pollQuestions" class="" style="display:none;">
+			<!-- displlay poll pair -->
+			<h3>Poll Question</h3>
+			
+			<table>
+				<tr>
+					<td class="pollQuestionTitle" colspan="3"><span class="questionTextDisplay">Question</span></td>
+				</tr>
+				<tr>
+					<td class="pollQuestion" id="pollQuestion1">&nbsp;</td>
+					<td />
+					<td class="pollQuestion" id="pollQuestion2">&nbsp;</td>
+				</tr>
+				
+				<!-- Simple voting buttons -->
+				<tr class="simplePollButtons">
+					<td>
+						<input type="button" id="L_MuchMore" value="&lt;&lt;&nbsp;Much More" />
+						<input type="button" id="L_SlightlyMore" value="&lt;&nbsp;Slightly More" />
+					</td>
+					<td>
+						<input type="button" class="pollVoteLink" id="L_R_Same" value="Same" />
+					</td>
+					<td>
+						<input type="button" id="R_SlightlyMore" value="Slightly More&nbsp;&gt;" />
+						<input type="button" id="R_MuchMore" value="Much More&nbsp;&gt;&gt;" />
+					</td>
+				</tr>
+				
+				<!-- Detailed voting buttons -->
+				<tr class="detailedPollButtons">
+					<td>
+						<input type="button" class="leftMore" value="10" />
+						<input type="button" class="leftMore" value="9" />
+						<input type="button" class="leftMore" value="8" />
+						<input type="button" class="leftMore" value="7" />
+						<input type="button" class="leftMore" value="6" />
+						<input type="button" class="leftMore" value="5" />
+						<input type="button" class="leftMore" value="4" />
+						<input type="button" class="leftMore" value="3" />
+						<input type="button" class="leftMore" value="2" />
+					</td>
+					<td>
+						<input type="button" class="same" value="1" />
+					</td>
+					<td>
+						<input type="button" class="rightMore" value="2" />
+						<input type="button" class="rightMore" value="3" />
+						<input type="button" class="rightMore" value="4" />
+						<input type="button" class="rightMore" value="5" />
+						<input type="button" class="rightMore" value="6" />
+						<input type="button" class="rightMore" value="7" />
+						<input type="button" class="rightMore" value="8" />
+						<input type="button" class="rightMore" value="9" />
+						<input type="button" class="rightMore" value="10" />
+					</td>
+				</tr>
+			</table>
+			<span class="questionIndex">0</span>
+		</div>
+		
+		<!-- results -->
+		<div id="pollResults">
+			<h3>Poll Results</h3>
+		</div>
+	</div>
+</body>
+</html>
