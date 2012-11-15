@@ -484,7 +484,7 @@ ahp._displayResults = function(calcResults){
 				'</td>' +
 				'<td>' +
 				// bar
-				'<div style="background-color:blue;width:' + (resultText * 1.2 * 100) + 'px">&nbsp;</div>' + 
+				'<div style="background-color:blue;width:' + (resultText * 1.2 * 100).toFixed(4) + 'px">&nbsp;</div>' +
 				'</td>' +
 				'</tr>';
 	}
@@ -545,7 +545,7 @@ ahp._convertRealToRoundedPercent = function(num, digits){
 	var r = 5 / f2;
 	
 	// calc rounded result
-	var resultValue = (((num + r ) * f1) + '').split('.', 1)/f1;
+	var resultValue = ((((num + r ) * f1) + '').split('.', 1)/f1).toFixed(4);
 	
 	// convert to string
 	resultValue = resultValue + '';
