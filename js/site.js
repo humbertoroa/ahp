@@ -5,37 +5,52 @@ var displayHelper = {};
  */
 displayHelper.initializePoll = function(){
 	
-	// bind events
-	$('#addOption').click(function(){
-		displayHelper.addOptionToList();
-	});
+	// bind events only to elements that exist
+	var addOptionBtn = document.getElementById('addOption');
+	if(addOptionBtn) {
+		addOptionBtn.addEventListener('click', function(){
+			displayHelper.addOptionToList();
+		});
+	}
 	
-	$('#addMultiOptions').click(function(){
-		displayHelper.addMultiOptionsToList();
-	});
+	var addMultiOptionsBtn = document.getElementById('addMultiOptions');
+	if(addMultiOptionsBtn) {
+		addMultiOptionsBtn.addEventListener('click', function(){
+			displayHelper.addMultiOptionsToList();
+		});
+	}
 
-	$('.startPoll').click(function(){
-		displayHelper.startPoll();
+	document.querySelectorAll('.startPoll').forEach(function(element) {
+		element.addEventListener('click', function(){
+			displayHelper.startPoll();
+		});
 	});
 	
-	$('.stopPoll').click(function(){
-		displayHelper.stopPoll();
+	document.querySelectorAll('.stopPoll').forEach(function(element) {
+		element.addEventListener('click', function(){
+			displayHelper.stopPoll();
+		});
 	});
 	
-	$('.changePoll').click(function(){
-		displayHelper.stopPoll();
+	document.querySelectorAll('.changePoll').forEach(function(element) {
+		element.addEventListener('click', function(){
+			displayHelper.stopPoll();
+		});
 	});
 	
 	// add an option to the list when the user selects the enter key
-	$("#optionText").keypress(function (e) {  
-         if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {  
-         	// take an action
-			displayHelper.addOptionToList();
-         }  
-     });
+	var optionTextInput = document.getElementById('optionText');
+	if(optionTextInput) {
+		optionTextInput.addEventListener('keypress', function (e) {  
+			if (e.key === 'Enter') {
+				// take an action
+				displayHelper.addOptionToList();
+			}  
+		});
+	}
      
      // hide the poll results container because there are not any results yet
-     $('#pollResults').hide();
+     document.getElementById('pollResults').style.display = 'none';
 };
 
 
@@ -44,8 +59,11 @@ displayHelper.initializePoll = function(){
  * the input field: #optionText
  */
 displayHelper.addOptionToList = function(){
-	var option = $('#optionText').val();
-	displayHelper._addOption(option);	
+	var optionTextInput = document.getElementById('optionText');
+	if(optionTextInput) {
+		var option = optionTextInput.value;
+		displayHelper._addOption(option);	
+	}
 };
 
 /**
@@ -54,16 +72,16 @@ displayHelper.addOptionToList = function(){
  */
 displayHelper.addMultiOptionsToList = function(){
 	// split the options from the textarea
-	var options = $('#multiOptionText').val();
+	var options = document.getElementById('multiOptionText').value;
 	var optionArray = options.split('\n');
 
 	// add each option
-	$.each(optionArray, function(){
-		displayHelper._addOption(this);
+	optionArray.forEach(function(option){
+		displayHelper._addOption(option);
 	});
 
 	// clear the textarea
-	$('#multiOptionText').val('');
+	document.getElementById('multiOptionText').value = '';
 
 };
 
@@ -77,8 +95,23 @@ displayHelper._addOption = function(option){
 	option.trim();
 
 	if(option.length > 0){
-		$('<tr class="new"><td class="index"></td><td class="option">' + option + '</td><td><a href="#" class="removeParent">[x]</a></td></tr>')
-		.appendTo('#optionsList').hide().fadeIn('slow');	
+		var row = document.createElement('tr');
+		row.className = 'new';
+		row.style.display = 'none';
+		row.innerHTML = '<td class="index"></td><td class="option">' + option + '</td><td><a href="#" class="removeParent">[x]</a></td>';
+		document.getElementById('optionsList').appendChild(row);
+		
+		// Fade in effect
+		row.style.display = 'table-row';
+		row.style.opacity = '0';
+		var opacity = 0;
+		var fadeIn = setInterval(function() {
+			opacity += 0.1;
+			row.style.opacity = opacity;
+			if (opacity >= 1) {
+				clearInterval(fadeIn);
+			}
+		}, 50);
 		
 		// clear the option text
 		displayHelper._resetOptionInputText();		
@@ -95,9 +128,9 @@ displayHelper._addOption = function(option){
  * purpose: clear the text in the input: #optionText
  */
 displayHelper._resetOptionInputText = function(){
-	$('#optionText').val('');
-	
-};
+	var optionTextInput = document.getElementById('optionText');
+	if(optionTextInput) {
+		optionTextInput.va
 
 /**
  * purpose: reset the poll using the values in the Object poll as the new poll values
@@ -106,15 +139,14 @@ displayHelper._resetOptionInputText = function(){
  */
 displayHelper._resetPoll = function(poll){
 	// remove the existing poll options
-	$('#optionsList').empty();
+	document.getElementById('optionsList').innerHTML = '';
 
 	// set the poll question
-	$('.questionTextInput').val(poll.question);
+	document.querySelector('.questionTextInput').value = poll.question;
 
 	// set the poll options
-	$.each(poll.options, function(i,n){
-		console.log($(this));
-		displayHelper._addOption(n);
+	poll.options.forEach(function(option){
+		displayHelper._addOption(option);
 	});
 	
 	// stop the poll
@@ -125,12 +157,16 @@ displayHelper._resetPoll = function(poll){
  * purpose: bind a remove event to the remove link for an option
  */
 displayHelper._bindRemoveEvents = function(){
-	$('#optionsList tr.new .removeParent').click(function(){
-		$(this).parent().parent().remove();
-		displayHelper._updateTableIndex();
+	document.querySelectorAll('#optionsList tr.new .removeParent').forEach(function(element){
+		element.addEventListener('click', function(){
+			this.parentNode.parentNode.remove();
+			displayHelper._updateTableIndex();
+		});
 	});
 	
-	$('#optionsList tr.new').removeClass('new');
+	document.querySelectorAll('#optionsList tr.new').forEach(function(element){
+		element.classList.remove('new');
+	});
 };
 		
 /**
@@ -138,16 +174,23 @@ displayHelper._bindRemoveEvents = function(){
  */
 displayHelper.stopPoll = function(){
 	// hide the stop poll button container
-	$('.stopPoll').hide();
+	document.querySelectorAll('.stopPoll').forEach(function(element){
+		element.style.display = 'none';
+	});
 	
 	// hide the poll questions container
-	$('.changePoll, #pollQuestions').hide();
+	document.querySelectorAll('.changePoll').forEach(function(element){
+		element.style.display = 'none';
+	});
+	document.getElementById('pollQuestions').style.display = 'none';
 	
 	// show hidden containers for setup
-	$('.newOption, .removeParent, .startPoll, .setup').show('slow');
+	document.querySelectorAll('.newOption, .removeParent, .startPoll, .setup').forEach(function(element){
+		element.style.display = 'block';
+	});
 	
 	// show the existing poll results
-	$('#pollResults').show();
+	document.getElementById('pollResults').style.display = 'block';
 };
 
 /**
@@ -156,44 +199,53 @@ displayHelper.stopPoll = function(){
  */
 displayHelper.changePoll = function(){
 	// hide the stop poll button container
-	$('.stopPoll').hide();
+	document.querySelectorAll('.stopPoll').forEach(function(element){
+		element.style.display = 'none';
+	});
 	
 	//show the change poll container
-	$('.changePoll').show();
+	document.querySelectorAll('.changePoll').forEach(function(element){
+		element.style.display = 'block';
+	});
 	
 	// show the existing poll results
-	$('#pollResults').show();
+	document.getElementById('pollResults').style.display = 'block';
 };
 
 /**
  * purpose: function to start a poll. This function is bound to a button.
  */
 displayHelper.startPoll = function(){
-	if($('#optionsList .option').size() > 1){
+	if(document.querySelectorAll('#optionsList .option').length > 1){
 		// hide the setup container
-		$('.setup').hide();
+		document.querySelectorAll('.setup').forEach(function(element){
+			element.style.display = 'none';
+		});
 		
 		// display the stop poll button
-		$('.stopPoll').show();
+		document.querySelectorAll('.stopPoll').forEach(function(element){
+			element.style.display = 'block';
+		});
 		
 		// hide the existing poll results
-		$('#pollResults').hide();
+		document.getElementById('pollResults').style.display = 'none';
 
 		// hide set up containers
-		$('.newOption, .removeParent, .startPoll').hide();
+		document.querySelectorAll('.newOption, .removeParent, .startPoll').forEach(function(element){
+			element.style.display = 'none';
+		});
 		
 		var pollSettings = {};
 		pollSettings.optionArray = [];
 
-		pollSettings.questionText = $('.questionTextInput').val();
+		pollSettings.questionText = document.querySelector('.questionTextInput').value;
 
 		// extract the options
-		var optionArray = [];
-		$('#optionsList .option').each(function(i, n){
-			pollSettings.optionArray[pollSettings.optionArray.length] = $(this).text();
+		document.querySelectorAll('#optionsList .option').forEach(function(element){
+			pollSettings.optionArray.push(element.textContent);
 		});
 		
-		//pollSettings.voteType = $("input[name='votingType']:checked").val();
+		//pollSettings.voteType = document.querySelector("input[name='votingType']:checked").value;
         pollSettings.voteType = "simpleVoting";
 
 		// start the poll
@@ -206,8 +258,8 @@ displayHelper.startPoll = function(){
  * purpose: update the option list index
  */
 displayHelper._updateTableIndex = function(){
-	$('#optionsList .index').each(function(index){
-		$(this).html('<strong>option ' + (index+1) + ': </strong>');
+	document.querySelectorAll('#optionsList .index').forEach(function(element, index){
+		element.innerHTML = '<strong>option ' + (index+1) + ': </strong>';
 	});
 };
 
@@ -268,7 +320,7 @@ ahp.startPoll = function(pollSettings){
 	
 	// display the first pair
 	ahp._displayNextQuestion();
-	$('#pollQuestions').show('slow');
+	document.getElementById('pollQuestions').style.display = 'block';
 };
 
 /**
@@ -288,13 +340,21 @@ ahp._setVotingType = function(pollSettings){
 	if(pollSettings.voteType){
 		 switch (pollSettings.voteType) {
 		 	case 'simpleVoting':
-		 		$('.detailedPollButtons').hide();
-		 		$('.simplePollButtons').show();
+		 		document.querySelectorAll('.detailedPollButtons').forEach(function(element){
+		 			element.style.display = 'none';
+		 		});
+		 		document.querySelectorAll('.simplePollButtons').forEach(function(element){
+		 			element.style.display = 'block';
+		 		});
 		 		break;
 		 		
 		 	case 'detailedVoting':
-		 		$('.simplePollButtons').hide();
-		 		$('.detailedPollButtons').show();
+		 		document.querySelectorAll('.simplePollButtons').forEach(function(element){
+		 			element.style.display = 'none';
+		 		});
+		 		document.querySelectorAll('.detailedPollButtons').forEach(function(element){
+		 			element.style.display = 'block';
+		 		});
 		 		break;
 		 		
 		 	default:
@@ -312,10 +372,10 @@ ahp._displayNextQuestion = function(){
 	
 	if(nextQuestion !== false){
 		// display the pair
-		$('.questionTextDisplay').text(ahp.question);
-		$('.questionIndex').text('comparison '+ ahp.questionIndex +' of ' + ahp.questionTotal);
-		$('#pollQuestion1').text(ahp.optionArray[nextQuestion[0]]);
-		$('#pollQuestion2').text(ahp.optionArray[nextQuestion[1]]);
+		document.querySelector('.questionTextDisplay').textContent = ahp.question;
+		document.querySelector('.questionIndex').textContent = 'comparison '+ ahp.questionIndex +' of ' + ahp.questionTotal;
+		document.getElementById('pollQuestion1').textContent = ahp.optionArray[nextQuestion[0]];
+		document.getElementById('pollQuestion2').textContent = ahp.optionArray[nextQuestion[1]];
 		ahp._bindVoteEvents(nextQuestion);
 	} else {
 		// calculate the results
@@ -329,12 +389,12 @@ ahp._displayNextQuestion = function(){
  * purpose: unbind the events on the voting buttons
  */
 ahp._unbindVoteEvents = function(){
-	$('.simplePollButtons input[type="button"]').each(function(){
-		$(this).unbind('click');
+	document.querySelectorAll('.simplePollButtons input[type="button"]').forEach(function(element){
+		element.replaceWith(element.cloneNode(true));
 	});
 
-	$('.detailedPollButtons input[type="button"]').each(function(){
-		$(this).unbind('click');
+	document.querySelectorAll('.detailedPollButtons input[type="button"]').forEach(function(element){
+		element.replaceWith(element.cloneNode(true));
 	});
 }; 
 
@@ -355,23 +415,23 @@ ahp._bindVoteEvents = function(nextQuestionArr){
  * purpose: bind the events to the simple buttons
  */
 ahp._bindSimpleVoteEvents = function(leftpair, rightpair){
-	$('.simplePollButtons #L_MuchMore').click(function(){
+	document.querySelector('.simplePollButtons #L_MuchMore').addEventListener('click', function(){
 		ahp.recordVote(leftpair, ahp.scores.high);
 	});
 
-	$('.simplePollButtons #L_SlightlyMore').click(function(){
+	document.querySelector('.simplePollButtons #L_SlightlyMore').addEventListener('click', function(){
 		ahp.recordVote(leftpair, ahp.scores.low);
 	});
 	
-	$('.simplePollButtons #L_R_Same').click(function(){
+	document.querySelector('.simplePollButtons #L_R_Same').addEventListener('click', function(){
 		ahp.recordVote(leftpair, ahp.scores.eq);
 	});
 	
-	$('.simplePollButtons #R_SlightlyMore').click(function(){
+	document.querySelector('.simplePollButtons #R_SlightlyMore').addEventListener('click', function(){
 		ahp.recordVote(rightpair, ahp.scores.low);
 	});
 	
-	$('#R_MuchMore').click(function(){
+	document.getElementById('R_MuchMore').addEventListener('click', function(){
 		ahp.recordVote(rightpair, ahp.scores.high);
 	});
 };
@@ -380,19 +440,19 @@ ahp._bindSimpleVoteEvents = function(leftpair, rightpair){
  * purpose: bind the events to the detailed buttons
  */
 ahp._bindDetailedVoteEvents = function(leftpair, rightpair){
-	$('.detailedPollButtons input[type="button"].leftMore').each(function(){
-		$(this).click(function(){
-			ahp.recordVote(leftpair, parseInt($(this).val(), 10));
+	document.querySelectorAll('.detailedPollButtons input[type="button"].leftMore').forEach(function(element){
+		element.addEventListener('click', function(){
+			ahp.recordVote(leftpair, parseInt(this.value, 10));
 		});
 	});
 	
-	$('.detailedPollButtons input[type="button"].rightMore').each(function(){
-		$(this).click(function(){
-			ahp.recordVote(rightpair, parseInt($(this).val(), 10));
+	document.querySelectorAll('.detailedPollButtons input[type="button"].rightMore').forEach(function(element){
+		element.addEventListener('click', function(){
+			ahp.recordVote(rightpair, parseInt(this.value, 10));
 		});
 	});
 	
-	$('.detailedPollButtons input[type="button"].same').click(function(){
+	document.querySelector('.detailedPollButtons input[type="button"].same').addEventListener('click', function(){
 		ahp.recordVote(leftpair, 1);
 	});
 };
@@ -425,7 +485,7 @@ ahp._calculateResult = function(){
 	console.log('calculating results ...');
 	
 	// hide questions 
-	$('#pollQuestions').hide('slow');
+	document.getElementById('pollQuestions').style.display = 'none';
 
 	// calc results
 	var calcResults = ahpCalc.calculateResults(this.resultArray);
@@ -444,7 +504,9 @@ ahp._displayResults = function(calcResults){
 	var resultId = 'result_set_' +	ahp.resultCount;
 	
 	// remove the current class from existing result tables
-	$('table.current').removeClass('current');
+	document.querySelectorAll('table.current').forEach(function(element){
+		element.classList.remove('current');
+	});
 	
 	
 	html += '<table class="current pollResultTable">';
@@ -521,7 +583,11 @@ ahp._displayResults = function(calcResults){
 	html += '</table>';
 	
 	// display the table
-	$(html).insertAfter('#pollResults h3').hide().fadeIn('slow');
+	var tempDiv = document.createElement('div');
+	tempDiv.innerHTML = html;
+	var table = tempDiv.firstChild;
+	var h3 = document.querySelector('#pollResults h3');
+	h3.parentNode.insertBefore(table, h3.nextSibling);
 	
 	// increment the result table count
 	ahp.resultCount ++;
@@ -555,34 +621,39 @@ ahp._convertRealToRoundedPercent = function(num, digits){
 
 ahp._addScaleResultsEvents = function(){
 	
-	$('.scaleResults-new').click(function(){
-		var scaleFactor = $(this).parent().find('.resultScaleFactor').get(0);
-		scaleFactor = $(scaleFactor).val();
-		
-		$(this).parent().parent().parent().find('.result').each(function(){
-			var curentVal = $(this).text();
-			var scaledResult= $(this).parent().parent().find('.scaledResult').get(0);
-			$(scaledResult).text(ahp._convertRealToRoundedPercent(curentVal * scaleFactor));
-		});	
-		
+	document.querySelectorAll('.scaleResults-new').forEach(function(button){
+		button.addEventListener('click', function(){
+			var scaleFactor = this.parentNode.querySelector('.resultScaleFactor').value;
+			
+			this.parentNode.parentNode.parentNode.querySelectorAll('.result').forEach(function(resultElement){
+				var currentVal = resultElement.textContent;
+				var scaledResult = resultElement.parentNode.parentNode.querySelector('.scaledResult');
+				scaledResult.textContent = ahp._convertRealToRoundedPercent(currentVal * scaleFactor);
+			});	
+		});
 	});
 	
 	// bind the enter key events
-	var input = $('.scaleResults-new').parent().find('.resultScaleFactor').get(0);
-	$(input).keypress(function (e) {  
-         if ((e.which && e.which == 13) || (e.keyCode && e.keyCode == 13)) {  
-			var scaleFactor = $(this).val();
-			
-			$(this).parent().parent().parent().find('.result').each(function(){
-				var curentVal = $(this).text();
-				var scaledResult= $(this).parent().parent().find('.scaledResult').get(0);
-				$(scaledResult).text(ahp._convertRealToRoundedPercent(curentVal * scaleFactor));
-			});	
- 
-         }  
-     }); 
+	document.querySelectorAll('.scaleResults-new').forEach(function(button){
+		var input = button.parentNode.querySelector('.resultScaleFactor');
+		if(input){
+			input.addEventListener('keypress', function (e) {  
+				if (e.key === 'Enter') {  
+					var scaleFactor = this.value;
+					
+					this.parentNode.parentNode.parentNode.querySelectorAll('.result').forEach(function(resultElement){
+						var currentVal = resultElement.textContent;
+						var scaledResult = resultElement.parentNode.parentNode.querySelector('.scaledResult');
+						scaledResult.textContent = ahp._convertRealToRoundedPercent(currentVal * scaleFactor);
+					});	
+				}  
+			}); 
+		}
+	});
 
-	$('.scaleResults-new').removeClass();	
+	document.querySelectorAll('.scaleResults-new').forEach(function(element){
+		element.className = '';
+	});	
 };
 
 
@@ -592,7 +663,7 @@ ahp._addScaleResultsEvents = function(){
 ahp._addRetryEvents = function(resultId){
 	
 	// bind the button click event to the retry function
-	$('.'+ resultId + ' input.retryPoll').click(function(){
+	document.querySelector('.'+ resultId + ' input.retryPoll').addEventListener('click', function(){
 		ahp._retryPoll(resultId);
 	});	
 };
@@ -604,8 +675,10 @@ ahp._addRetryEvents = function(resultId){
 ahp._addResultToggleEvents = function(resultId){
 	
 	// toggle the rows
-	$('.'+ resultId + ' input.togglePollResults').click(function(){
-		$(this).parent().parent().parent().find('.result_set').toggle();
+	document.querySelector('.'+ resultId + ' input.togglePollResults').addEventListener('click', function(){
+		this.parentNode.parentNode.parentNode.querySelectorAll('.result_set').forEach(function(element){
+			element.style.display = element.style.display === 'none' ? 'table-row' : 'none';
+		});
 	});	
 };
 
@@ -618,11 +691,11 @@ ahp._retryPoll = function(resultId){
 	poll.options = [];
 
 	// get the poll question text from the result table
-	poll.question = $('.' + resultId).parent().find('.resultSetQuestionText').text();
+	poll.question = document.querySelector('.' + resultId).parentNode.querySelector('.resultSetQuestionText').textContent;
 	
 	// get the poll options from the result table
-	$('.' + resultId).parent().find('.resultSetOptionText').each(function(i){
-		poll.options[i] = $(this).text();
+	document.querySelector('.' + resultId).parentNode.querySelectorAll('.resultSetOptionText').forEach(function(element, i){
+		poll.options[i] = element.textContent;
 	});
 	
 	// reset the poll using the result question and options
@@ -660,7 +733,7 @@ ahp._getNextQuestion = function(optionArray, resultArray){
 /**
  * purpose: execute functions on document load
  */
-$(document).ready(function(){
+document.addEventListener('DOMContentLoaded', function(){
 	// intialize the poll
 	displayHelper.initializePoll();
 	
