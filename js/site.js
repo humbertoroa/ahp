@@ -1,6 +1,55 @@
 var displayHelper = {};
 
 /**
+ * purpose: display an error message to the user
+ *
+ * @param String message the error message to display
+ */
+displayHelper._showError = function(message){
+	var errorDiv = document.getElementById('errorMessage');
+	if(!errorDiv) {
+		errorDiv = document.createElement('div');
+		errorDiv.id = 'errorMessage';
+		errorDiv.style.cssText = 'background-color: #ffcccc; border: 2px solid #cc0000; color: #cc0000; padding: 10px; margin: 10px 0; border-radius: 5px; font-weight: bold;';
+		var container = document.querySelector('.container');
+		container.insertBefore(errorDiv, container.firstChild);
+	}
+	errorDiv.textContent = '⚠ Error: ' + message;
+	errorDiv.style.display = 'block';
+
+	// Auto-hide after 5 seconds
+	setTimeout(function(){
+		errorDiv.style.display = 'none';
+	}, 5000);
+};
+
+/**
+ * purpose: hide the error message
+ */
+displayHelper._hideError = function(){
+	var errorDiv = document.getElementById('errorMessage');
+	if(errorDiv) {
+		errorDiv.style.display = 'none';
+	}
+};
+
+/**
+ * purpose: check if an option already exists in the options list
+ *
+ * @param String option the option text to check
+ * @return Boolean true if duplicate exists, false otherwise
+ */
+displayHelper._isDuplicateOption = function(option){
+	var isDuplicate = false;
+	document.querySelectorAll('#optionsList .option').forEach(function(element){
+		if(element.textContent.toLowerCase() === option.toLowerCase()){
+			isDuplicate = true;
+		}
+	});
+	return isDuplicate;
+};
+
+/**
  * purpose: initialize the poll
  */
 displayHelper.initializePoll = function(){
@@ -92,36 +141,45 @@ displayHelper.addMultiOptionsToList = function(){
  */
 displayHelper._addOption = function(option){
 
-	option.trim();
+	option = option.trim();
 
-	if(option.length > 0){
-		var row = document.createElement('tr');
-		row.className = 'new';
-		row.style.display = 'none';
-		row.innerHTML = '<td class="index"></td><td class="option">' + option + '</td><td><a href="#" class="removeParent">[x]</a></td>';
-		document.getElementById('optionsList').appendChild(row);
-		
-		// Fade in effect
-		row.style.display = 'table-row';
-		row.style.opacity = '0';
-		var opacity = 0;
-		var fadeIn = setInterval(function() {
-			opacity += 0.1;
-			row.style.opacity = opacity;
-			if (opacity >= 1) {
-				clearInterval(fadeIn);
-			}
-		}, 50);
-		
-		// clear the option text
-		displayHelper._resetOptionInputText();		
-		
-		// bind the remove event to the delete button
-		displayHelper._bindRemoveEvents();
-		
-		// update the table index. This will renumber the table rows.
-		displayHelper._updateTableIndex();
+	// Validate option is not empty
+	if(option.length === 0){
+		return; // Silently ignore empty options
 	}
+
+	// Check for duplicate options
+	if(displayHelper._isDuplicateOption(option)){
+		displayHelper._showError('Duplicate option: "' + option + '" already exists.');
+		return;
+	}
+
+	var row = document.createElement('tr');
+	row.className = 'new';
+	row.style.display = 'none';
+	row.innerHTML = '<td class="index"></td><td class="option">' + option + '</td><td><a href="#" class="removeParent">[x]</a></td>';
+	document.getElementById('optionsList').appendChild(row);
+
+	// Fade in effect
+	row.style.display = 'table-row';
+	row.style.opacity = '0';
+	var opacity = 0;
+	var fadeIn = setInterval(function() {
+		opacity += 0.1;
+		row.style.opacity = opacity;
+		if (opacity >= 1) {
+			clearInterval(fadeIn);
+		}
+	}, 50);
+
+	// clear the option text
+	displayHelper._resetOptionInputText();
+
+	// bind the remove event to the delete button
+	displayHelper._bindRemoveEvents();
+
+	// update the table index. This will renumber the table rows.
+	displayHelper._updateTableIndex();
 };
 
 /**
@@ -130,7 +188,9 @@ displayHelper._addOption = function(option){
 displayHelper._resetOptionInputText = function(){
 	var optionTextInput = document.getElementById('optionText');
 	if(optionTextInput) {
-		optionTextInput.va
+		optionTextInput.value = '';
+	}
+};
 
 /**
  * purpose: reset the poll using the values in the Object poll as the new poll values
@@ -216,42 +276,58 @@ displayHelper.changePoll = function(){
  * purpose: function to start a poll. This function is bound to a button.
  */
 displayHelper.startPoll = function(){
-	if(document.querySelectorAll('#optionsList .option').length > 1){
-		// hide the setup container
-		document.querySelectorAll('.setup').forEach(function(element){
-			element.style.display = 'none';
-		});
-		
-		// display the stop poll button
-		document.querySelectorAll('.stopPoll').forEach(function(element){
-			element.style.display = 'block';
-		});
-		
-		// hide the existing poll results
-		document.getElementById('pollResults').style.display = 'none';
+	// Get question text and trim it
+	var questionText = document.querySelector('.questionTextInput').value.trim();
+	var optionCount = document.querySelectorAll('#optionsList .option').length;
 
-		// hide set up containers
-		document.querySelectorAll('.newOption, .removeParent, .startPoll').forEach(function(element){
-			element.style.display = 'none';
-		});
-		
-		var pollSettings = {};
-		pollSettings.optionArray = [];
-
-		pollSettings.questionText = document.querySelector('.questionTextInput').value;
-
-		// extract the options
-		document.querySelectorAll('#optionsList .option').forEach(function(element){
-			pollSettings.optionArray.push(element.textContent);
-		});
-		
-		//pollSettings.voteType = document.querySelector("input[name='votingType']:checked").value;
-        pollSettings.voteType = "simpleVoting";
-
-		// start the poll
-		ahp.startPoll(pollSettings);
-		
+	// Validate question text
+	if(questionText.length === 0){
+		displayHelper._showError('Please enter a question before starting the poll.');
+		return;
 	}
+
+	// Validate minimum number of options
+	if(optionCount < 2){
+		displayHelper._showError('Please add at least 2 options to compare. Currently you have ' + optionCount + ' option(s).');
+		return;
+	}
+
+	// Hide error message if validation passes
+	displayHelper._hideError();
+
+	// hide the setup container
+	document.querySelectorAll('.setup').forEach(function(element){
+		element.style.display = 'none';
+	});
+
+	// display the stop poll button
+	document.querySelectorAll('.stopPoll').forEach(function(element){
+		element.style.display = 'block';
+	});
+
+	// hide the existing poll results
+	document.getElementById('pollResults').style.display = 'none';
+
+	// hide set up containers
+	document.querySelectorAll('.newOption, .removeParent, .startPoll').forEach(function(element){
+		element.style.display = 'none';
+	});
+
+	var pollSettings = {};
+	pollSettings.optionArray = [];
+
+	pollSettings.questionText = questionText;
+
+	// extract the options
+	document.querySelectorAll('#optionsList .option').forEach(function(element){
+		pollSettings.optionArray.push(element.textContent);
+	});
+
+	//pollSettings.voteType = document.querySelector("input[name='votingType']:checked").value;
+	pollSettings.voteType = "simpleVoting";
+
+	// start the poll
+	ahp.startPoll(pollSettings);
 };
 
 /**
