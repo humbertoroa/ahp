@@ -420,19 +420,19 @@ ahp._setVotingType = function(pollSettings){
 		 			element.style.display = 'none';
 		 		});
 		 		document.querySelectorAll('.simplePollButtons').forEach(function(element){
-		 			element.style.display = 'block';
+		 			element.style.display = 'table-row';
 		 		});
 		 		break;
-		 		
+
 		 	case 'detailedVoting':
 		 		document.querySelectorAll('.simplePollButtons').forEach(function(element){
 		 			element.style.display = 'none';
 		 		});
 		 		document.querySelectorAll('.detailedPollButtons').forEach(function(element){
-		 			element.style.display = 'block';
+		 			element.style.display = 'table-row';
 		 		});
 		 		break;
-		 		
+
 		 	default:
 		 		break;
 		 }
