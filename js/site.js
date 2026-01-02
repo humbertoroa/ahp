@@ -110,16 +110,13 @@ displayHelper.initializePoll = function(){
 		});
 	}
 
-	// Bind view saved results button
-	var viewResultsBtn = document.getElementById('viewSavedResults');
-	if(viewResultsBtn) {
-		viewResultsBtn.addEventListener('click', function() {
-			displayHelper.showSavedResults();
-		});
-	}
-
-     // hide the poll results container because there are not any results yet
-     document.getElementById('pollResults').style.display = 'none';
+     // Only hide the poll results container if there are no saved results
+     var savedResults = pollStorage.loadResults();
+     if(savedResults.length === 0) {
+         document.getElementById('pollResults').style.display = 'none';
+     } else {
+         document.getElementById('pollResults').style.display = 'block';
+     }
 };
 
 
@@ -364,29 +361,6 @@ displayHelper.startPoll = function(){
 displayHelper._updateTableIndex = function(){
 	document.querySelectorAll('#optionsList .index').forEach(function(element, index){
 		element.innerHTML = '<strong>option ' + (index+1) + ': </strong>';
-	});
-};
-
-/**
- * purpose: show saved results and scroll to them
- */
-displayHelper.showSavedResults = function(){
-	var pollResults = document.getElementById('pollResults');
-	var savedResults = pollStorage.loadResults();
-
-	// Check if there are any saved results
-	if(savedResults.length === 0) {
-		displayHelper._showError('No saved results found. Complete a poll to see results here.');
-		return;
-	}
-
-	// Show the poll results container
-	pollResults.style.display = 'block';
-
-	// Scroll smoothly to the results
-	pollResults.scrollIntoView({
-		behavior: 'smooth',
-		block: 'start'
 	});
 };
 
