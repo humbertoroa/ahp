@@ -366,6 +366,7 @@ displayHelper._updateTableIndex = function(){
 var pollStorage = {};
 
 pollStorage.STORAGE_KEY = 'ahp_poll_state';
+pollStorage.RESULTS_KEY = 'ahp_poll_results';
 
 /**
  * purpose: save current poll state to localStorage
@@ -493,6 +494,183 @@ pollStorage.restorePollState = function(){
 	}
 
 	return true;
+};
+
+/**
+ * purpose: save a poll result to localStorage
+ * @param Object resultData - the result data to save
+ */
+pollStorage.saveResult = function(resultData){
+	try {
+		var results = pollStorage.loadResults();
+		results.push(resultData);
+		localStorage.setItem(pollStorage.RESULTS_KEY, JSON.stringify(results));
+	} catch(e) {
+		console.error('Failed to save result:', e);
+	}
+};
+
+/**
+ * purpose: load all poll results from localStorage
+ * @return Array array of saved results
+ */
+pollStorage.loadResults = function(){
+	try {
+		var resultsJson = localStorage.getItem(pollStorage.RESULTS_KEY);
+		if(resultsJson) {
+			return JSON.parse(resultsJson);
+		}
+	} catch(e) {
+		console.error('Failed to load results:', e);
+	}
+	return [];
+};
+
+/**
+ * purpose: delete a specific result from localStorage
+ * @param String resultId - the ID of the result to delete
+ */
+pollStorage.deleteResult = function(resultId){
+	try {
+		var results = pollStorage.loadResults();
+		results = results.filter(function(result){
+			return result.id !== resultId;
+		});
+		localStorage.setItem(pollStorage.RESULTS_KEY, JSON.stringify(results));
+	} catch(e) {
+		console.error('Failed to delete result:', e);
+	}
+};
+
+/**
+ * purpose: clear all results from localStorage
+ */
+pollStorage.clearAllResults = function(){
+	try {
+		localStorage.removeItem(pollStorage.RESULTS_KEY);
+	} catch(e) {
+		console.error('Failed to clear results:', e);
+	}
+};
+
+/**
+ * purpose: restore all saved results from localStorage and display them
+ */
+pollStorage.restoreResults = function(){
+	var results = pollStorage.loadResults();
+	if(results.length === 0) {
+		return;
+	}
+
+	// Display results in order
+	results.forEach(function(resultData){
+		pollStorage._renderSavedResult(resultData);
+	});
+
+	// Update ahp.resultCount to continue numbering from the highest saved result
+	var maxResultNumber = Math.max.apply(Math, results.map(function(r){ return r.resultSetNumber; }));
+	ahp.resultCount = maxResultNumber + 1;
+};
+
+/**
+ * purpose: render a saved result from localStorage data
+ * @param Object resultData - the saved result data
+ */
+pollStorage._renderSavedResult = function(resultData){
+	var html = '';
+	var resultId = resultData.id;
+
+	// remove the current class from existing result tables
+	document.querySelectorAll('table.current').forEach(function(element){
+		element.classList.remove('current');
+	});
+
+	html += '<table class="current pollResultTable">';
+
+	// the question text
+	html +=	'<tr>' +
+			'<td colspan="4" class="titleRow">Result Set #' +
+			resultData.resultSetNumber +
+			': ' +
+			'<span class="resultSetQuestionText">' +
+			resultData.question +
+			' </span>' +
+			'</td></tr>';
+
+	html += '<tr class="result_set resultColumnTitle">' +
+			'<td>Option</td>'	+
+			'<td>Result</td>'	+
+			'<td>Scaled <br /> Result</td>' +
+			'<td>&nbsp</td>'+
+			'</tr>';
+
+	// the option text and result values
+	for(var i = 0; i < resultData.options.length; i++){
+		var resultText = ahp._convertRealToRoundedPercent(resultData.results[i]);
+
+		html += '<tr class="result_set" >' +
+				'<td>' +
+				// option title
+				'<span class="resultSetOptionText">' + resultData.options[i] + '</span>' +
+				'</td>' +
+				'<td>' +
+				'<span class="result">' + resultText + '</span>' +
+				'</td>' +
+				'<td>' +
+				'<span style="text-align: right;" class="scaledResult">' + resultText + '</span>' +
+				'</td>' +
+				'<td>' +
+				// bar
+				'<div style="background-color:blue;width:' + (resultText * 1.2 * 100).toFixed(4) + 'px">&nbsp;</div>' +
+				'</td>' +
+				'</tr>';
+	}
+
+	// scale factor input
+	html +=	'<tr class="result_set">' +
+			'<td colspan="2" style="text-align: right;">&nbsp;</td>' +
+			'<td colspan="2" style="text-align: left;">' +
+			'<input size="4" style="text-align: right;" class="resultScaleFactor" value="1"/>' +
+			'<button style="text-align: right;" class="scaleResults-new">Scale</button>' +
+			'</td></tr>';
+
+	// the consistency calculation
+	var consistencyRatioClass = '';
+	if(resultData.consistencyRatio < 0.11 ){
+		consistencyRatioClass = 'green';
+	}
+	else {
+		consistencyRatioClass = 'orange';
+	}
+
+	html +=	'<tr>' +
+			'<td colspan="4" class = "' +
+			 consistencyRatioClass +
+			'">Consistency Ratio: ' +
+			 ahp._convertRealToRoundedPercent(resultData.consistencyRatio, 2) +
+			'</td></tr>';
+
+	// the action buttons
+	html +=	'<tr class="' + resultId +'" >' +
+			'<td colspan="3">' +
+			'<input type="button" class="retryPoll" value="Retry" />' +
+			'<input type="button" class="togglePollResults" value="Hide/Show" />' +
+			'<input type="button" class="deleteResult" value="Delete" style="background-color: #ffcccc; color: #cc0000;" /></td></tr>';
+
+	html += '</table>';
+
+	// display the table
+	var tempDiv = document.createElement('div');
+	tempDiv.innerHTML = html;
+	var table = tempDiv.firstChild;
+	var h3 = document.querySelector('#pollResults h3');
+	h3.parentNode.insertBefore(table, h3.nextSibling);
+
+	// bind events to the buttons in the restored table
+	ahp._addRetryEvents(resultId);
+	ahp._addResultToggleEvents(resultId);
+	ahp._addScaleResultsEvents();
+	ahp._addDeleteResultEvents(resultId);
 };
 
 var ahp = {};
@@ -817,7 +995,8 @@ ahp._displayResults = function(calcResults){
 	html +=	'<tr class="' + resultId +'" >' +
 			'<td colspan="3">' +
 			'<input type="button" class="retryPoll" value="Retry" />' +
-			'<input type="button" class="togglePollResults" value="Hide/Show" /></td></tr>';
+			'<input type="button" class="togglePollResults" value="Hide/Show" />' +
+			'<input type="button" class="deleteResult" value="Delete" style="background-color: #ffcccc; color: #cc0000;" /></td></tr>';
 
 	html += '</table>';
 	
@@ -827,14 +1006,27 @@ ahp._displayResults = function(calcResults){
 	var table = tempDiv.firstChild;
 	var h3 = document.querySelector('#pollResults h3');
 	h3.parentNode.insertBefore(table, h3.nextSibling);
-	
+
+	// Save result data to localStorage
+	var resultData = {
+		id: resultId,
+		resultSetNumber: ahp.resultCount,
+		question: ahp.question,
+		options: ahp.optionArray.slice(), // copy array
+		results: calcResults.resultColumn.slice(),
+		consistencyRatio: calcResults.consistencyRatio,
+		timestamp: new Date().toISOString()
+	};
+	pollStorage.saveResult(resultData);
+
 	// increment the result table count
 	ahp.resultCount ++;
-	
+
 	// bind events to the buttons in the new table
 	ahp._addRetryEvents(resultId);
 	ahp._addResultToggleEvents(resultId);
 	ahp._addScaleResultsEvents();
+	ahp._addDeleteResultEvents(resultId);
 };
 
 /**
@@ -912,13 +1104,33 @@ ahp._addRetryEvents = function(resultId){
  * This function is bound to a button in the result table.
  */
 ahp._addResultToggleEvents = function(resultId){
-	
+
 	// toggle the rows
 	document.querySelector('.'+ resultId + ' input.togglePollResults').addEventListener('click', function(){
 		this.parentNode.parentNode.parentNode.querySelectorAll('.result_set').forEach(function(element){
 			element.style.display = element.style.display === 'none' ? 'table-row' : 'none';
 		});
-	});	
+	});
+};
+
+/**
+ * purpose: bind the delete event to the delete button in the result table
+ * @param String resultId - the ID of the result set
+ */
+ahp._addDeleteResultEvents = function(resultId){
+	document.querySelector('.'+ resultId + ' input.deleteResult').addEventListener('click', function(){
+		// Confirm deletion
+		if(confirm('Are you sure you want to delete this result?')) {
+			// Remove from DOM
+			var table = this.closest('table.pollResultTable');
+			if(table) {
+				table.remove();
+			}
+
+			// Remove from localStorage
+			pollStorage.deleteResult(resultId);
+		}
+	});
 };
 
 /**
@@ -975,6 +1187,9 @@ ahp._getNextQuestion = function(optionArray, resultArray){
 document.addEventListener('DOMContentLoaded', function(){
 	// intialize the poll
 	displayHelper.initializePoll();
+
+	// restore saved poll results from localStorage
+	pollStorage.restoreResults();
 
 	// restore poll state from localStorage if available
 	pollStorage.restorePollState();
