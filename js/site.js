@@ -1,6 +1,55 @@
 var displayHelper = {};
 
 /**
+ * purpose: display an error message to the user
+ *
+ * @param String message the error message to display
+ */
+displayHelper._showError = function(message){
+	var errorDiv = document.getElementById('errorMessage');
+	if(!errorDiv) {
+		errorDiv = document.createElement('div');
+		errorDiv.id = 'errorMessage';
+		errorDiv.style.cssText = 'background-color: #ffcccc; border: 2px solid #cc0000; color: #cc0000; padding: 10px; margin: 10px 0; border-radius: 5px; font-weight: bold;';
+		var container = document.querySelector('.container');
+		container.insertBefore(errorDiv, container.firstChild);
+	}
+	errorDiv.textContent = '⚠ Error: ' + message;
+	errorDiv.style.display = 'block';
+
+	// Auto-hide after 5 seconds
+	setTimeout(function(){
+		errorDiv.style.display = 'none';
+	}, 5000);
+};
+
+/**
+ * purpose: hide the error message
+ */
+displayHelper._hideError = function(){
+	var errorDiv = document.getElementById('errorMessage');
+	if(errorDiv) {
+		errorDiv.style.display = 'none';
+	}
+};
+
+/**
+ * purpose: check if an option already exists in the options list
+ *
+ * @param String option the option text to check
+ * @return Boolean true if duplicate exists, false otherwise
+ */
+displayHelper._isDuplicateOption = function(option){
+	var isDuplicate = false;
+	document.querySelectorAll('#optionsList .option').forEach(function(element){
+		if(element.textContent.toLowerCase() === option.toLowerCase()){
+			isDuplicate = true;
+		}
+	});
+	return isDuplicate;
+};
+
+/**
  * purpose: initialize the poll
  */
 displayHelper.initializePoll = function(){
@@ -41,16 +90,33 @@ displayHelper.initializePoll = function(){
 	// add an option to the list when the user selects the enter key
 	var optionTextInput = document.getElementById('optionText');
 	if(optionTextInput) {
-		optionTextInput.addEventListener('keypress', function (e) {  
+		optionTextInput.addEventListener('keypress', function (e) {
 			if (e.key === 'Enter') {
 				// take an action
 				displayHelper.addOptionToList();
-			}  
+			}
 		});
 	}
-     
-     // hide the poll results container because there are not any results yet
-     document.getElementById('pollResults').style.display = 'none';
+
+	// Save question text to localStorage when it changes (with debouncing)
+	var questionTextInput = document.querySelector('.questionTextInput');
+	var questionSaveTimeout;
+	if(questionTextInput) {
+		questionTextInput.addEventListener('input', function() {
+			clearTimeout(questionSaveTimeout);
+			questionSaveTimeout = setTimeout(function() {
+				pollStorage.savePollState();
+			}, 500); // Wait 500ms after user stops typing
+		});
+	}
+
+     // Only hide the poll results container if there are no saved results
+     var savedResults = pollStorage.loadResults();
+     if(savedResults.length === 0) {
+         document.getElementById('pollResults').style.display = 'none';
+     } else {
+         document.getElementById('pollResults').style.display = 'block';
+     }
 };
 
 
@@ -92,36 +158,48 @@ displayHelper.addMultiOptionsToList = function(){
  */
 displayHelper._addOption = function(option){
 
-	option.trim();
+	option = option.trim();
 
-	if(option.length > 0){
-		var row = document.createElement('tr');
-		row.className = 'new';
-		row.style.display = 'none';
-		row.innerHTML = '<td class="index"></td><td class="option">' + option + '</td><td><a href="#" class="removeParent">[x]</a></td>';
-		document.getElementById('optionsList').appendChild(row);
-		
-		// Fade in effect
-		row.style.display = 'table-row';
-		row.style.opacity = '0';
-		var opacity = 0;
-		var fadeIn = setInterval(function() {
-			opacity += 0.1;
-			row.style.opacity = opacity;
-			if (opacity >= 1) {
-				clearInterval(fadeIn);
-			}
-		}, 50);
-		
-		// clear the option text
-		displayHelper._resetOptionInputText();		
-		
-		// bind the remove event to the delete button
-		displayHelper._bindRemoveEvents();
-		
-		// update the table index. This will renumber the table rows.
-		displayHelper._updateTableIndex();
+	// Validate option is not empty
+	if(option.length === 0){
+		return; // Silently ignore empty options
 	}
+
+	// Check for duplicate options
+	if(displayHelper._isDuplicateOption(option)){
+		displayHelper._showError('Duplicate option: "' + option + '" already exists.');
+		return;
+	}
+
+	var row = document.createElement('tr');
+	row.className = 'new';
+	row.style.display = 'none';
+	row.innerHTML = '<td class="index"></td><td class="option">' + option + '</td><td><a href="#" class="removeParent">[x]</a></td>';
+	document.getElementById('optionsList').appendChild(row);
+
+	// Fade in effect
+	row.style.display = 'table-row';
+	row.style.opacity = '0';
+	var opacity = 0;
+	var fadeIn = setInterval(function() {
+		opacity += 0.1;
+		row.style.opacity = opacity;
+		if (opacity >= 1) {
+			clearInterval(fadeIn);
+		}
+	}, 50);
+
+	// clear the option text
+	displayHelper._resetOptionInputText();
+
+	// bind the remove event to the delete button
+	displayHelper._bindRemoveEvents();
+
+	// update the table index. This will renumber the table rows.
+	displayHelper._updateTableIndex();
+
+	// Save state to localStorage
+	pollStorage.savePollState();
 };
 
 /**
@@ -130,7 +208,9 @@ displayHelper._addOption = function(option){
 displayHelper._resetOptionInputText = function(){
 	var optionTextInput = document.getElementById('optionText');
 	if(optionTextInput) {
-		optionTextInput.va
+		optionTextInput.value = '';
+	}
+};
 
 /**
  * purpose: reset the poll using the values in the Object poll as the new poll values
@@ -161,9 +241,11 @@ displayHelper._bindRemoveEvents = function(){
 		element.addEventListener('click', function(){
 			this.parentNode.parentNode.remove();
 			displayHelper._updateTableIndex();
+			// Save state after removing option
+			pollStorage.savePollState();
 		});
 	});
-	
+
 	document.querySelectorAll('#optionsList tr.new').forEach(function(element){
 		element.classList.remove('new');
 	});
@@ -216,42 +298,61 @@ displayHelper.changePoll = function(){
  * purpose: function to start a poll. This function is bound to a button.
  */
 displayHelper.startPoll = function(){
-	if(document.querySelectorAll('#optionsList .option').length > 1){
-		// hide the setup container
-		document.querySelectorAll('.setup').forEach(function(element){
-			element.style.display = 'none';
-		});
-		
-		// display the stop poll button
-		document.querySelectorAll('.stopPoll').forEach(function(element){
-			element.style.display = 'block';
-		});
-		
-		// hide the existing poll results
-		document.getElementById('pollResults').style.display = 'none';
+	// Get question text and trim it
+	var questionText = document.querySelector('.questionTextInput').value.trim();
+	var optionCount = document.querySelectorAll('#optionsList .option').length;
 
-		// hide set up containers
-		document.querySelectorAll('.newOption, .removeParent, .startPoll').forEach(function(element){
-			element.style.display = 'none';
-		});
-		
-		var pollSettings = {};
-		pollSettings.optionArray = [];
-
-		pollSettings.questionText = document.querySelector('.questionTextInput').value;
-
-		// extract the options
-		document.querySelectorAll('#optionsList .option').forEach(function(element){
-			pollSettings.optionArray.push(element.textContent);
-		});
-		
-		//pollSettings.voteType = document.querySelector("input[name='votingType']:checked").value;
-        pollSettings.voteType = "simpleVoting";
-
-		// start the poll
-		ahp.startPoll(pollSettings);
-		
+	// Validate question text
+	if(questionText.length === 0){
+		displayHelper._showError('Please enter a question before starting the poll.');
+		return;
 	}
+
+	// Validate minimum number of options
+	if(optionCount < 2){
+		displayHelper._showError('Please add at least 2 options to compare. Currently you have ' + optionCount + ' option(s).');
+		return;
+	}
+
+	// Hide error message if validation passes
+	displayHelper._hideError();
+
+	// hide the setup container
+	document.querySelectorAll('.setup').forEach(function(element){
+		element.style.display = 'none';
+	});
+
+	// display the stop poll button
+	document.querySelectorAll('.stopPoll').forEach(function(element){
+		element.style.display = 'block';
+	});
+
+	// hide the existing poll results
+	document.getElementById('pollResults').style.display = 'none';
+
+	// hide set up containers
+	document.querySelectorAll('.newOption, .removeParent, .startPoll').forEach(function(element){
+		element.style.display = 'none';
+	});
+
+	var pollSettings = {};
+	pollSettings.optionArray = [];
+
+	pollSettings.questionText = questionText;
+
+	// extract the options
+	document.querySelectorAll('#optionsList .option').forEach(function(element){
+		pollSettings.optionArray.push(element.textContent);
+	});
+
+	//pollSettings.voteType = document.querySelector("input[name='votingType']:checked").value;
+	pollSettings.voteType = "simpleVoting";
+
+	// start the poll
+	ahp.startPoll(pollSettings);
+
+	// Save state to localStorage
+	pollStorage.savePollState();
 };
 
 /**
@@ -261,6 +362,320 @@ displayHelper._updateTableIndex = function(){
 	document.querySelectorAll('#optionsList .index').forEach(function(element, index){
 		element.innerHTML = '<strong>option ' + (index+1) + ': </strong>';
 	});
+};
+
+/**
+ * Local Storage Manager
+ * Handles saving and loading poll state to/from localStorage
+ */
+var pollStorage = {};
+
+pollStorage.STORAGE_KEY = 'ahp_poll_state';
+pollStorage.RESULTS_KEY = 'ahp_poll_results';
+
+/**
+ * purpose: save current poll state to localStorage
+ */
+pollStorage.savePollState = function(){
+	try {
+		var state = {
+			// Poll setup
+			question: ahp.question || '',
+			options: ahp.optionArray || [],
+
+			// Active poll state
+			isActive: document.getElementById('pollQuestions').style.display !== 'none',
+			questionIndex: ahp.questionIndex || 1,
+			questionTotal: ahp.questionTotal || 0,
+			resultArray: ahp.resultArray || [],
+			voteType: document.querySelector('.simplePollButtons') &&
+			          document.querySelector('.simplePollButtons').style.display !== 'none' ?
+			          'simpleVoting' : 'detailedVoting',
+
+			// Result count for numbering result sets
+			resultCount: ahp.resultCount || 1,
+
+			// Save timestamp
+			timestamp: new Date().toISOString()
+		};
+
+		localStorage.setItem(pollStorage.STORAGE_KEY, JSON.stringify(state));
+	} catch(e) {
+		console.error('Failed to save poll state:', e);
+	}
+};
+
+/**
+ * purpose: load poll state from localStorage
+ * @return Object|null the saved state or null if none exists
+ */
+pollStorage.loadPollState = function(){
+	try {
+		var stateJson = localStorage.getItem(pollStorage.STORAGE_KEY);
+		if(stateJson) {
+			return JSON.parse(stateJson);
+		}
+	} catch(e) {
+		console.error('Failed to load poll state:', e);
+	}
+	return null;
+};
+
+/**
+ * purpose: clear saved poll state from localStorage
+ */
+pollStorage.clearPollState = function(){
+	try {
+		localStorage.removeItem(pollStorage.STORAGE_KEY);
+	} catch(e) {
+		console.error('Failed to clear poll state:', e);
+	}
+};
+
+/**
+ * purpose: restore poll state from localStorage
+ */
+pollStorage.restorePollState = function(){
+	var state = pollStorage.loadPollState();
+	if(!state) {
+		return false;
+	}
+
+	// Restore options to the list
+	if(state.options && state.options.length > 0) {
+		state.options.forEach(function(option){
+			displayHelper._addOption(option);
+		});
+	}
+
+	// Restore question text
+	if(state.question) {
+		document.querySelector('.questionTextInput').value = state.question;
+	}
+
+	// Restore result count
+	if(state.resultCount) {
+		ahp.resultCount = state.resultCount;
+	}
+
+	// If poll was active, restore the active state
+	if(state.isActive && state.options && state.options.length > 1) {
+		// Set up poll data
+		ahp.question = state.question;
+		ahp.optionArray = state.options;
+		ahp.resultArray = state.resultArray || [];
+		ahp.questionIndex = state.questionIndex || 1;
+		ahp.questionTotal = state.questionTotal || 0;
+
+		// Restore voting type
+		var pollSettings = {
+			voteType: state.voteType || 'simpleVoting'
+		};
+		ahp._setVotingType(pollSettings);
+
+		// Show poll questions UI
+		document.getElementById('pollQuestions').style.display = 'block';
+
+		// Hide setup containers
+		document.querySelectorAll('.setup').forEach(function(element){
+			element.style.display = 'none';
+		});
+
+		// Show stop poll button
+		document.querySelectorAll('.stopPoll').forEach(function(element){
+			element.style.display = 'block';
+		});
+
+		// Hide setup buttons and links
+		document.querySelectorAll('.newOption, .removeParent, .startPoll').forEach(function(element){
+			element.style.display = 'none';
+		});
+
+		// Hide results
+		document.getElementById('pollResults').style.display = 'none';
+
+		// Display the current question
+		ahp._displayNextQuestion();
+	}
+
+	return true;
+};
+
+/**
+ * purpose: save a poll result to localStorage
+ * @param Object resultData - the result data to save
+ */
+pollStorage.saveResult = function(resultData){
+	try {
+		var results = pollStorage.loadResults();
+		results.push(resultData);
+		localStorage.setItem(pollStorage.RESULTS_KEY, JSON.stringify(results));
+	} catch(e) {
+		console.error('Failed to save result:', e);
+	}
+};
+
+/**
+ * purpose: load all poll results from localStorage
+ * @return Array array of saved results
+ */
+pollStorage.loadResults = function(){
+	try {
+		var resultsJson = localStorage.getItem(pollStorage.RESULTS_KEY);
+		if(resultsJson) {
+			return JSON.parse(resultsJson);
+		}
+	} catch(e) {
+		console.error('Failed to load results:', e);
+	}
+	return [];
+};
+
+/**
+ * purpose: delete a specific result from localStorage
+ * @param String resultId - the ID of the result to delete
+ */
+pollStorage.deleteResult = function(resultId){
+	try {
+		var results = pollStorage.loadResults();
+		results = results.filter(function(result){
+			return result.id !== resultId;
+		});
+		localStorage.setItem(pollStorage.RESULTS_KEY, JSON.stringify(results));
+	} catch(e) {
+		console.error('Failed to delete result:', e);
+	}
+};
+
+/**
+ * purpose: clear all results from localStorage
+ */
+pollStorage.clearAllResults = function(){
+	try {
+		localStorage.removeItem(pollStorage.RESULTS_KEY);
+	} catch(e) {
+		console.error('Failed to clear results:', e);
+	}
+};
+
+/**
+ * purpose: restore all saved results from localStorage and display them
+ */
+pollStorage.restoreResults = function(){
+	var results = pollStorage.loadResults();
+	if(results.length === 0) {
+		return;
+	}
+
+	// Display results in order
+	results.forEach(function(resultData){
+		pollStorage._renderSavedResult(resultData);
+	});
+
+	// Update ahp.resultCount to continue numbering from the highest saved result
+	var maxResultNumber = Math.max.apply(Math, results.map(function(r){ return r.resultSetNumber; }));
+	ahp.resultCount = maxResultNumber + 1;
+};
+
+/**
+ * purpose: render a saved result from localStorage data
+ * @param Object resultData - the saved result data
+ */
+pollStorage._renderSavedResult = function(resultData){
+	var html = '';
+	var resultId = resultData.id;
+
+	// remove the current class from existing result tables
+	document.querySelectorAll('table.current').forEach(function(element){
+		element.classList.remove('current');
+	});
+
+	html += '<table class="current pollResultTable">';
+
+	// the question text
+	html +=	'<tr>' +
+			'<td colspan="4" class="titleRow">Result Set #' +
+			resultData.resultSetNumber +
+			': ' +
+			'<span class="resultSetQuestionText">' +
+			resultData.question +
+			' </span>' +
+			'</td></tr>';
+
+	html += '<tr class="result_set resultColumnTitle">' +
+			'<td>Option</td>'	+
+			'<td>Result</td>'	+
+			'<td>Scaled <br /> Result</td>' +
+			'<td>&nbsp</td>'+
+			'</tr>';
+
+	// the option text and result values
+	for(var i = 0; i < resultData.options.length; i++){
+		var resultText = ahp._convertRealToRoundedPercent(resultData.results[i]);
+
+		html += '<tr class="result_set" >' +
+				'<td>' +
+				// option title
+				'<span class="resultSetOptionText">' + resultData.options[i] + '</span>' +
+				'</td>' +
+				'<td>' +
+				'<span class="result">' + resultText + '</span>' +
+				'</td>' +
+				'<td>' +
+				'<span style="text-align: right;" class="scaledResult">' + resultText + '</span>' +
+				'</td>' +
+				'<td>' +
+				// bar
+				'<div style="background-color:blue;width:' + (resultText * 1.2 * 100).toFixed(4) + 'px">&nbsp;</div>' +
+				'</td>' +
+				'</tr>';
+	}
+
+	// scale factor input
+	html +=	'<tr class="result_set">' +
+			'<td colspan="2" style="text-align: right;">&nbsp;</td>' +
+			'<td colspan="2" style="text-align: left;">' +
+			'<input size="4" style="text-align: right;" class="resultScaleFactor" value="1"/>' +
+			'<button style="text-align: right;" class="scaleResults-new">Scale</button>' +
+			'</td></tr>';
+
+	// the consistency calculation
+	var consistencyRatioClass = '';
+	if(resultData.consistencyRatio < 0.11 ){
+		consistencyRatioClass = 'green';
+	}
+	else {
+		consistencyRatioClass = 'orange';
+	}
+
+	html +=	'<tr>' +
+			'<td colspan="4" class = "' +
+			 consistencyRatioClass +
+			'">Consistency Ratio: ' +
+			 ahp._convertRealToRoundedPercent(resultData.consistencyRatio, 2) +
+			'</td></tr>';
+
+	// the action buttons
+	html +=	'<tr class="' + resultId +'" >' +
+			'<td colspan="3">' +
+			'<input type="button" class="retryPoll" value="Retry" />' +
+			'<input type="button" class="togglePollResults" value="Hide/Show" />' +
+			'<input type="button" class="deleteResult" value="Delete" style="background-color: #ffcccc; color: #cc0000;" /></td></tr>';
+
+	html += '</table>';
+
+	// display the table
+	var tempDiv = document.createElement('div');
+	tempDiv.innerHTML = html;
+	var table = tempDiv.firstChild;
+	var h3 = document.querySelector('#pollResults h3');
+	h3.parentNode.insertBefore(table, h3.nextSibling);
+
+	// bind events to the buttons in the restored table
+	ahp._addRetryEvents(resultId);
+	ahp._addResultToggleEvents(resultId);
+	ahp._addScaleResultsEvents();
+	ahp._addDeleteResultEvents(resultId);
 };
 
 var ahp = {};
@@ -344,19 +759,19 @@ ahp._setVotingType = function(pollSettings){
 		 			element.style.display = 'none';
 		 		});
 		 		document.querySelectorAll('.simplePollButtons').forEach(function(element){
-		 			element.style.display = 'block';
+		 			element.style.display = 'table-row';
 		 		});
 		 		break;
-		 		
+
 		 	case 'detailedVoting':
 		 		document.querySelectorAll('.simplePollButtons').forEach(function(element){
 		 			element.style.display = 'none';
 		 		});
 		 		document.querySelectorAll('.detailedPollButtons').forEach(function(element){
-		 			element.style.display = 'block';
+		 			element.style.display = 'table-row';
 		 		});
 		 		break;
-		 		
+
 		 	default:
 		 		break;
 		 }
@@ -470,12 +885,15 @@ ahp.recordVote = function (pair, score){
 	// record the scores
 	ahp.resultArray[pair[0]][pair[1]] = score;
 	ahp.resultArray[pair[1]][pair[0]] = 1/score;
-	
+
 	// increment the question index
 	ahp.questionIndex ++;
-	
+
 	// display the next pair
 	ahp._displayNextQuestion();
+
+	// Save state to localStorage after recording vote
+	pollStorage.savePollState();
 };
 
 /**
@@ -483,17 +901,21 @@ ahp.recordVote = function (pair, score){
  */
 ahp._calculateResult = function(){
 	console.log('calculating results ...');
-	
-	// hide questions 
+
+	// hide questions
 	document.getElementById('pollQuestions').style.display = 'none';
 
 	// calc results
 	var calcResults = ahpCalc.calculateResults(this.resultArray);
-	
+
 	// display the results
 	ahp._displayResults(calcResults);
-	
+
 	displayHelper.changePoll();
+
+	// Clear active poll state from localStorage since poll is now complete
+	// Only keep the setup (question and options) for potential retry
+	pollStorage.savePollState();
 };
 
 /**
@@ -578,7 +1000,8 @@ ahp._displayResults = function(calcResults){
 	html +=	'<tr class="' + resultId +'" >' +
 			'<td colspan="3">' +
 			'<input type="button" class="retryPoll" value="Retry" />' +
-			'<input type="button" class="togglePollResults" value="Hide/Show" /></td></tr>';
+			'<input type="button" class="togglePollResults" value="Hide/Show" />' +
+			'<input type="button" class="deleteResult" value="Delete" style="background-color: #ffcccc; color: #cc0000;" /></td></tr>';
 
 	html += '</table>';
 	
@@ -588,14 +1011,27 @@ ahp._displayResults = function(calcResults){
 	var table = tempDiv.firstChild;
 	var h3 = document.querySelector('#pollResults h3');
 	h3.parentNode.insertBefore(table, h3.nextSibling);
-	
+
+	// Save result data to localStorage
+	var resultData = {
+		id: resultId,
+		resultSetNumber: ahp.resultCount,
+		question: ahp.question,
+		options: ahp.optionArray.slice(), // copy array
+		results: calcResults.resultColumn.slice(),
+		consistencyRatio: calcResults.consistencyRatio,
+		timestamp: new Date().toISOString()
+	};
+	pollStorage.saveResult(resultData);
+
 	// increment the result table count
 	ahp.resultCount ++;
-	
+
 	// bind events to the buttons in the new table
 	ahp._addRetryEvents(resultId);
 	ahp._addResultToggleEvents(resultId);
 	ahp._addScaleResultsEvents();
+	ahp._addDeleteResultEvents(resultId);
 };
 
 /**
@@ -673,13 +1109,33 @@ ahp._addRetryEvents = function(resultId){
  * This function is bound to a button in the result table.
  */
 ahp._addResultToggleEvents = function(resultId){
-	
+
 	// toggle the rows
 	document.querySelector('.'+ resultId + ' input.togglePollResults').addEventListener('click', function(){
 		this.parentNode.parentNode.parentNode.querySelectorAll('.result_set').forEach(function(element){
 			element.style.display = element.style.display === 'none' ? 'table-row' : 'none';
 		});
-	});	
+	});
+};
+
+/**
+ * purpose: bind the delete event to the delete button in the result table
+ * @param String resultId - the ID of the result set
+ */
+ahp._addDeleteResultEvents = function(resultId){
+	document.querySelector('.'+ resultId + ' input.deleteResult').addEventListener('click', function(){
+		// Confirm deletion
+		if(confirm('Are you sure you want to delete this result?')) {
+			// Remove from DOM
+			var table = this.closest('table.pollResultTable');
+			if(table) {
+				table.remove();
+			}
+
+			// Remove from localStorage
+			pollStorage.deleteResult(resultId);
+		}
+	});
 };
 
 /**
@@ -736,5 +1192,10 @@ ahp._getNextQuestion = function(optionArray, resultArray){
 document.addEventListener('DOMContentLoaded', function(){
 	// intialize the poll
 	displayHelper.initializePoll();
-	
+
+	// restore saved poll results from localStorage
+	pollStorage.restoreResults();
+
+	// restore poll state from localStorage if available
+	pollStorage.restorePollState();
 });
