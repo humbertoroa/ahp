@@ -327,7 +327,9 @@ This is a simple, focused tool. Potential enhancements:
 
 ## License
 
-Open source - feel free to use and modify.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+You are free to use, modify, and distribute this software for any purpose, including commercial use.
 
 ## Credits
 
