@@ -90,14 +90,26 @@ displayHelper.initializePoll = function(){
 	// add an option to the list when the user selects the enter key
 	var optionTextInput = document.getElementById('optionText');
 	if(optionTextInput) {
-		optionTextInput.addEventListener('keypress', function (e) {  
+		optionTextInput.addEventListener('keypress', function (e) {
 			if (e.key === 'Enter') {
 				// take an action
 				displayHelper.addOptionToList();
-			}  
+			}
 		});
 	}
-     
+
+	// Save question text to localStorage when it changes (with debouncing)
+	var questionTextInput = document.querySelector('.questionTextInput');
+	var questionSaveTimeout;
+	if(questionTextInput) {
+		questionTextInput.addEventListener('input', function() {
+			clearTimeout(questionSaveTimeout);
+			questionSaveTimeout = setTimeout(function() {
+				pollStorage.savePollState();
+			}, 500); // Wait 500ms after user stops typing
+		});
+	}
+
      // hide the poll results container because there are not any results yet
      document.getElementById('pollResults').style.display = 'none';
 };
@@ -180,6 +192,9 @@ displayHelper._addOption = function(option){
 
 	// update the table index. This will renumber the table rows.
 	displayHelper._updateTableIndex();
+
+	// Save state to localStorage
+	pollStorage.savePollState();
 };
 
 /**
@@ -221,9 +236,11 @@ displayHelper._bindRemoveEvents = function(){
 		element.addEventListener('click', function(){
 			this.parentNode.parentNode.remove();
 			displayHelper._updateTableIndex();
+			// Save state after removing option
+			pollStorage.savePollState();
 		});
 	});
-	
+
 	document.querySelectorAll('#optionsList tr.new').forEach(function(element){
 		element.classList.remove('new');
 	});
@@ -328,6 +345,9 @@ displayHelper.startPoll = function(){
 
 	// start the poll
 	ahp.startPoll(pollSettings);
+
+	// Save state to localStorage
+	pollStorage.savePollState();
 };
 
 /**
@@ -337,6 +357,142 @@ displayHelper._updateTableIndex = function(){
 	document.querySelectorAll('#optionsList .index').forEach(function(element, index){
 		element.innerHTML = '<strong>option ' + (index+1) + ': </strong>';
 	});
+};
+
+/**
+ * Local Storage Manager
+ * Handles saving and loading poll state to/from localStorage
+ */
+var pollStorage = {};
+
+pollStorage.STORAGE_KEY = 'ahp_poll_state';
+
+/**
+ * purpose: save current poll state to localStorage
+ */
+pollStorage.savePollState = function(){
+	try {
+		var state = {
+			// Poll setup
+			question: ahp.question || '',
+			options: ahp.optionArray || [],
+
+			// Active poll state
+			isActive: document.getElementById('pollQuestions').style.display !== 'none',
+			questionIndex: ahp.questionIndex || 1,
+			questionTotal: ahp.questionTotal || 0,
+			resultArray: ahp.resultArray || [],
+			voteType: document.querySelector('.simplePollButtons') &&
+			          document.querySelector('.simplePollButtons').style.display !== 'none' ?
+			          'simpleVoting' : 'detailedVoting',
+
+			// Result count for numbering result sets
+			resultCount: ahp.resultCount || 1,
+
+			// Save timestamp
+			timestamp: new Date().toISOString()
+		};
+
+		localStorage.setItem(pollStorage.STORAGE_KEY, JSON.stringify(state));
+	} catch(e) {
+		console.error('Failed to save poll state:', e);
+	}
+};
+
+/**
+ * purpose: load poll state from localStorage
+ * @return Object|null the saved state or null if none exists
+ */
+pollStorage.loadPollState = function(){
+	try {
+		var stateJson = localStorage.getItem(pollStorage.STORAGE_KEY);
+		if(stateJson) {
+			return JSON.parse(stateJson);
+		}
+	} catch(e) {
+		console.error('Failed to load poll state:', e);
+	}
+	return null;
+};
+
+/**
+ * purpose: clear saved poll state from localStorage
+ */
+pollStorage.clearPollState = function(){
+	try {
+		localStorage.removeItem(pollStorage.STORAGE_KEY);
+	} catch(e) {
+		console.error('Failed to clear poll state:', e);
+	}
+};
+
+/**
+ * purpose: restore poll state from localStorage
+ */
+pollStorage.restorePollState = function(){
+	var state = pollStorage.loadPollState();
+	if(!state) {
+		return false;
+	}
+
+	// Restore options to the list
+	if(state.options && state.options.length > 0) {
+		state.options.forEach(function(option){
+			displayHelper._addOption(option);
+		});
+	}
+
+	// Restore question text
+	if(state.question) {
+		document.querySelector('.questionTextInput').value = state.question;
+	}
+
+	// Restore result count
+	if(state.resultCount) {
+		ahp.resultCount = state.resultCount;
+	}
+
+	// If poll was active, restore the active state
+	if(state.isActive && state.options && state.options.length > 1) {
+		// Set up poll data
+		ahp.question = state.question;
+		ahp.optionArray = state.options;
+		ahp.resultArray = state.resultArray || [];
+		ahp.questionIndex = state.questionIndex || 1;
+		ahp.questionTotal = state.questionTotal || 0;
+
+		// Restore voting type
+		var pollSettings = {
+			voteType: state.voteType || 'simpleVoting'
+		};
+		ahp._setVotingType(pollSettings);
+
+		// Show poll questions UI
+		document.getElementById('pollQuestions').style.display = 'block';
+
+		// Hide setup containers
+		document.querySelectorAll('.setup').forEach(function(element){
+			element.style.display = 'none';
+		});
+
+		// Show stop poll button
+		document.querySelectorAll('.stopPoll').forEach(function(element){
+			element.style.display = 'block';
+		});
+
+		// Hide setup buttons and links
+		document.querySelectorAll('.newOption, .removeParent, .startPoll').forEach(function(element){
+			element.style.display = 'none';
+		});
+
+		// Hide results
+		document.getElementById('pollResults').style.display = 'none';
+
+		// Display the current question
+		ahp._displayNextQuestion();
+	}
+
+	return true;
 };
 
 var ahp = {};
@@ -546,12 +702,15 @@ ahp.recordVote = function (pair, score){
 	// record the scores
 	ahp.resultArray[pair[0]][pair[1]] = score;
 	ahp.resultArray[pair[1]][pair[0]] = 1/score;
-	
+
 	// increment the question index
 	ahp.questionIndex ++;
-	
+
 	// display the next pair
 	ahp._displayNextQuestion();
+
+	// Save state to localStorage after recording vote
+	pollStorage.savePollState();
 };
 
 /**
@@ -559,17 +718,21 @@ ahp.recordVote = function (pair, score){
  */
 ahp._calculateResult = function(){
 	console.log('calculating results ...');
-	
-	// hide questions 
+
+	// hide questions
 	document.getElementById('pollQuestions').style.display = 'none';
 
 	// calc results
 	var calcResults = ahpCalc.calculateResults(this.resultArray);
-	
+
 	// display the results
 	ahp._displayResults(calcResults);
-	
+
 	displayHelper.changePoll();
+
+	// Clear active poll state from localStorage since poll is now complete
+	// Only keep the setup (question and options) for potential retry
+	pollStorage.savePollState();
 };
 
 /**
@@ -812,5 +975,7 @@ ahp._getNextQuestion = function(optionArray, resultArray){
 document.addEventListener('DOMContentLoaded', function(){
 	// intialize the poll
 	displayHelper.initializePoll();
-	
+
+	// restore poll state from localStorage if available
+	pollStorage.restorePollState();
 });
