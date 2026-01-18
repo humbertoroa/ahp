@@ -33,6 +33,7 @@ Learn more: [Wikipedia - Analytic Hierarchy Process](https://en.wikipedia.org/wi
 - **localStorage persistence** - All data saved locally in your browser
 - **No dependencies** - Vanilla JavaScript (jQuery removed)
 - **Responsive validation** - Real-time error messages with auto-dismiss
+- **Modern ES6 Modules** - Clean, modular code structure
 
 ## How to Use
 
@@ -235,7 +236,7 @@ All data is stored in your browser's localStorage:
 ## Browser Compatibility
 
 Works in all modern browsers that support:
-- ES5 JavaScript
+- ES6 Modules
 - localStorage API
 - CSS3
 
@@ -260,8 +261,12 @@ Upload all files to any web server:
 ├── css/
 │   └── styles.css
 ├── js/
-│   ├── ahpCalc.obj.js
-│   └── site.js
+│   ├── main.js
+│   ├── ahp.js
+│   ├── ahpCalc.js
+│   ├── ahpArrayHelper.js
+│   ├── displayHelper.js
+│   └── pollStorage.js
 └── img/
     ├── 1-10.png
     └── simple.png
@@ -272,8 +277,12 @@ No server-side processing required - purely static HTML/CSS/JS.
 ## Technical Details
 
 ### Architecture
-- **ahpCalc.obj.js** - Core AHP mathematics (matrix normalization, eigenvalues)
-- **site.js** - UI controller, event handling, localStorage management
+- **main.js** - Application entry point
+- **ahp.js** - Poll controller logic
+- **ahpCalc.js** - Core AHP mathematics (matrix normalization, eigenvalues)
+- **ahpArrayHelper.js** - Array utility functions
+- **displayHelper.js** - UI manipulation and event handling
+- **pollStorage.js** - localStorage management
 - **Vanilla JavaScript** - No framework dependencies
 - **localStorage** - Client-side persistence
 

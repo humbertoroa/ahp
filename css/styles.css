@@ -157,3 +157,28 @@ fieldset img {
 	margin-left: 7em;
 	margin-top: .3em;
 }
+
+/* Styles moved from JS */
+#errorMessage {
+	background-color: #ffcccc;
+	border: 2px solid #cc0000;
+	color: #cc0000;
+	padding: 10px;
+	margin: 10px 0;
+	border-radius: 5px;
+	font-weight: bold;
+}
+
+.new {
+	display: none;
+}
+
+.new.fade-in {
+	display: table-row;
+	opacity: 0;
+	transition: opacity 0.5s ease-in;
+}
+
+.new.visible {
+	opacity: 1;
+}

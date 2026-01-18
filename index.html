@@ -1,61 +1,52 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>AHP</title>
 	
 	<link rel="stylesheet" type="text/css" href="css/styles.css" />
-	
-	<script type="text/javascript" src="js/ahpCalc.obj.js"></script>
-	<script type="text/javascript" src="js/site.js"></script>
 </head>
 <body>
-	<div class="container">
+	<main class="container">
 	
 		<!-- poll setup-->
-		<div class="setup">
+		<section class="setup">
 			<h3>Set Up the Poll</h3>
 			<!-- question text -->
 			<fieldset>
 				<legend>Question</legend>
-                <label>The question should support a pairwise comparison. For example: Which feature is more important?</label>
-				<input class="questionTextInput" style="width: 40em;"/>
+                <label for="questionInput">The question should support a pairwise comparison. For example: Which feature is more important?</label>
+				<input type="text" id="questionInput" class="questionTextInput" style="width: 100%; max-width: 40em;"/>
 			</fieldset>
 	
 			<!-- option list -->
 			<fieldset>
 				<legend>Options</legend>
-				<table id="optionsList" ></table>
-				<!-- add an option -->
-				<!--
-				<div class="newOption">
-					<label>New Option:</label><input id="optionText" style="width: 20em;"/>
-					<a href="#" id="addOption">Add</a>
-				</div>
-				-->
+				<table id="optionsList"></table>
 				<!-- add multiple options -->
 				<div class="newOption">
-					<label>Enter the options below, and then click the add button below. Each option should be on a separate line.</label><br />
-					<textarea rows="10" id="multiOptionText" style="width: 40em;"></textarea><br />
+					<label for="multiOptionText">Enter the options below, and then click the add button below. Each option should be on a separate line.</label><br />
+					<textarea rows="10" id="multiOptionText" style="width: 100%; max-width: 40em;"></textarea><br />
 					<input type="button" id="addMultiOptions" value="Add +" />
 				</div>
 			</fieldset>
 
-		</div>
+		</section>
 		
 		<!-- start,stop, retry buttons -->
-		<div class="">
+		<div class="controls">
 			<input type="button" class="startPoll" value="Start" />
 			<input type="button" class="stopPoll" style="display:none;" value="Stop" />
 			<input type="button" class="changePoll" style="display:none;" value="Retry with New Options" />
 		</div>
 		
 		<!-- poll questions -->
-		<div id="pollQuestions" class="" style="display:none;">
+		<section id="pollQuestions" style="display:none;">
 			<!-- displlay poll pair -->
 			<h3>Poll Question</h3>
 			
-			<span class="questionTextDisplay">Question</span>
+			<div class="questionTextDisplay" style="font-weight: bold; margin-bottom: 1em;">Question</div>
 			<table>
 				<tr>
 					<td class="pollQuestion" id="pollQuestion1">&nbsp;</td>
@@ -107,13 +98,15 @@
 					</td>
 				</tr>
 			</table>
-			<span class="questionIndex">0</span>
-		</div>
+			<div class="questionIndex">0</div>
+		</section>
 		
 		<!-- results -->
-		<div id="pollResults">
+		<section id="pollResults">
 			<h3>Poll Results</h3>
-		</div>
-	</div>
+		</section>
+	</main>
+
+	<script type="module" src="js/main.js"></script>
 </body>
 </html>
